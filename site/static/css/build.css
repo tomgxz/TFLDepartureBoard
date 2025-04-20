@@ -1,0 +1,75 @@
+body {
+  background-color: #000000;
+  color: #ffffff;
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+body .page-content {
+  width: inherit;
+  height: inherit;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+  -moz-column-gap: 2rem;
+       column-gap: 2rem;
+}
+body .page-content .board-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  flex-grow: 1;
+}
+body .page-content .board-wrapper .board {
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: start;
+  height: -moz-fit-content;
+  height: fit-content;
+}
+body .page-content .board-wrapper .board .board-line {
+  display: flex;
+  min-height: 1ch;
+}
+body .page-content .board-wrapper .board--underground {
+  background-color: #2e2e2e;
+  border: 1px solid #ffc800;
+  color: #ffc800;
+  width: 64ch;
+  font-family: monospace;
+  font-size: 1.2rem;
+  padding: 0.2rem 0.5rem;
+  row-gap: 0.2rem;
+}
+body .page-content .board-wrapper .board--underground .board-line-1 {
+  justify-content: space-between;
+  align-items: center;
+}
+body .page-content .board-wrapper .board--underground .board-line-2 {
+  justify-content: space-between;
+  align-items: center;
+}
+body .page-content .board-wrapper .board--underground .board-line-3 {
+  justify-content: center;
+  align-items: end;
+  margin-left: auto;
+  margin-right: auto;
+}
+body .page-content .options-wrapper {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+}
+body .page-content .options-wrapper .options .option-group {
+  display: flex;
+  flex-direction: column;
+}
+body .page-content .options-wrapper .options .option-group:not(:last-child) {
+  margin-bottom: 1rem;
+}/*# sourceMappingURL=build.css.map */

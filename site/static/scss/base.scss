@@ -1,0 +1,87 @@
+body {
+    background-color: $black;
+    color: $white;
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+    
+    .page-content {
+        width: inherit;
+        height: inherit;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        overflow: hidden;
+        column-gap: 2rem;
+
+        .board-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            flex-grow: 1;
+
+            .board {
+                display: flex;
+                flex-direction: column;
+                align-items: left;
+                justify-content: start;
+                height: fit-content;
+
+                .board-line {
+                    display: flex;
+                }
+
+                @each $name, $board-map in $board-maps {
+                    &--#{$name} {
+                        background-color: map-get($board-map, bg-base-color);
+                        border: 1px solid map-get($board-map, border-color);
+                        color: map-get($board-map, text-color);
+                        width: map-get($board-map, width);
+                        font-family: map-get($board-map, font);
+                        font-size: map-get($board-map, font-size);
+
+                        padding: map-get($board-map, lines, all, inset);
+                        row-gap: map-get($board-map, lines, all, gap);
+                        
+                        .board-line {
+                            @each $line-index, $line-map in map-get($board-map, lines) {
+                                &-#{$line-index} {
+                                    justify-content: map-get($line-map, justify);
+                                    align-items: map-get($line-map, align);
+    
+                                    @if map-get($line-map, justify) == center {
+                                        margin-left: auto;
+                                        margin-right: auto;
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+        .options-wrapper {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+
+            .options {
+
+                .option-group {
+                    display: flex;
+                    flex-direction: column;
+
+                    &:not(:last-child) {
+                        margin-bottom: 1rem;
+                    }
+                }
+            }
+        }
+    }
+}
