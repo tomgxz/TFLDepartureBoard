@@ -1,3 +1,7 @@
+:root, select, label {
+    font-family: monospace;
+}
+
 body {
     background-color: $black;
     color: $white;
@@ -14,6 +18,13 @@ body {
         align-items: center;
         overflow: hidden;
         column-gap: 2rem;
+
+        @media (max-width: 1000px) {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            row-gap: 2rem;
+        }
 
         .board-wrapper {
             display: flex;
@@ -60,6 +71,14 @@ body {
                                     }
                                 }
                             }
+
+                            > span:first-child {
+                                flex-grow: 1;
+
+                                &.center {
+                                    text-align: center;
+                                }
+                            }
                         }
 
                     }
@@ -68,11 +87,18 @@ body {
         }
 
         .options-wrapper {
-            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-right: 1rem;
+            margin-top: auto;
+            margin-bottom: auto;
+
+            @media (max-width: 1000px) {
+                margin-bottom: 1rem;
+                margin-right: auto;
+                margin-left: auto;
+            }
 
             .options {
 

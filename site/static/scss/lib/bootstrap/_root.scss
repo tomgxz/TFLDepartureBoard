@@ -1,0 +1,62 @@
+:root {
+
+  @each $color, $value in $grays {
+    --#{$prefix}gray-#{$color}: #{$value};
+  }
+
+  @each $color, $value in $theme-colors {
+    --#{$prefix}#{$color}: #{$value};
+  }
+
+  --#{$prefix}body-color: #{$body-color};
+  --#{$prefix}body-color-rgb: #{to-rgb($body-color)};
+  --#{$prefix}body-bg: #{$body-bg};
+  --#{$prefix}body-bg-rgb: #{to-rgb($body-bg)};
+
+  --#{$prefix}emphasis-color: #{$body-emphasis-color};
+  --#{$prefix}emphasis-color-rgb: #{to-rgb($body-emphasis-color)};
+
+  --#{$prefix}secondary-color: #{$body-secondary-color};
+  --#{$prefix}secondary-color-rgb: #{to-rgb($body-secondary-color)};
+  --#{$prefix}secondary-bg: #{$body-secondary-bg};
+  --#{$prefix}secondary-bg-rgb: #{to-rgb($body-secondary-bg)};
+
+  --#{$prefix}tertiary-color: #{$body-tertiary-color};
+  --#{$prefix}tertiary-color-rgb: #{to-rgb($body-tertiary-color)};
+  --#{$prefix}tertiary-bg: #{$body-tertiary-bg};
+  --#{$prefix}tertiary-bg-rgb: #{to-rgb($body-tertiary-bg)};
+
+  --#{$prefix}heading-color: #{$headings-color};
+
+  --#{$prefix}border-width: #{$border-width};
+  --#{$prefix}border-style: #{$border-style};
+  --#{$prefix}border-color: #{$border-color};
+  --#{$prefix}border-color-translucent: #{$border-color-translucent};
+
+  --#{$prefix}border-radius: #{$border-radius};
+  --#{$prefix}border-radius-sm: #{$border-radius-sm};
+  --#{$prefix}border-radius-lg: #{$border-radius-lg};
+  --#{$prefix}border-radius-xl: #{$border-radius-xl};
+  --#{$prefix}border-radius-xxl: #{$border-radius-xxl};
+  --#{$prefix}border-radius-2xl: var(--#{$prefix}border-radius-xxl); // Deprecated in v5.3.0 for consistency
+  --#{$prefix}border-radius-pill: #{$border-radius-pill};
+
+  --#{$prefix}box-shadow: #{$box-shadow};
+  --#{$prefix}box-shadow-sm: #{$box-shadow-sm};
+  --#{$prefix}box-shadow-lg: #{$box-shadow-lg};
+  --#{$prefix}box-shadow-inset: #{$box-shadow-inset};
+
+  // Focus styles
+  // scss-docs-start root-focus-variables
+  --#{$prefix}focus-ring-width: #{$focus-ring-width};
+  --#{$prefix}focus-ring-opacity: #{$focus-ring-opacity};
+  --#{$prefix}focus-ring-color: #{$focus-ring-color};
+  // scss-docs-end root-focus-variables
+
+  // scss-docs-start root-form-validation-variables
+  --#{$prefix}form-valid-color: #{$form-valid-color};
+  --#{$prefix}form-valid-border-color: #{$form-valid-border-color};
+  --#{$prefix}form-invalid-color: #{$form-invalid-color};
+  --#{$prefix}form-invalid-border-color: #{$form-invalid-border-color};
+  // scss-docs-end root-form-validation-variables
+}

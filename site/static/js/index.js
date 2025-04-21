@@ -439,9 +439,9 @@ const set_platform = platform => {
 // #region Board text handling
 
 const clear_board_text = () => {
-    board_line_1_left.html("<br>");
+    board_line_1_left.html("<br>").removeClass("center");
     board_line_1_right.html("<br>");
-    board_line_2_left.html("<br>");
+    board_line_2_left.html("<br>").removeClass("center");
     board_line_2_right.html("<br>");
 }
 
@@ -450,6 +450,7 @@ const update_board_text = () => {
     if (selected_line && selected_station && selected_platform) {
         if (changed_since_last_query) {
             changed_since_last_query = false;
+            clear_board_text();
 
             if (arrival_query_timeout) {
                 clearTimeout(arrival_query_timeout);
@@ -457,7 +458,7 @@ const update_board_text = () => {
             }
 
             let query_fn = async () => {
-            let arrivals = await selected_station.getTimetable(selected_line, selected_platform);
+                let arrivals = await selected_station.getTimetable(selected_line, selected_platform);
 
                 if (arrivals.length === 0) {
                     clear_board_text();
@@ -467,20 +468,28 @@ const update_board_text = () => {
                 const write = (arrival, index, left_node, right_node) => {
                     if (!arrival) return;
 
-                    let tts_text = arrival.time_to_station > 60 ? `${Math.floor(arrival.time_to_station / 60)} min` : "Due";
+                    let tts_text = arrival.time_to_station >= 30 ? `${Math.round(arrival.time_to_station / 60)} min` : "Due";
 
-                    left_node.text(`${index}  ${arrival.towards}`);
+                    left_node.text(`${index}  ${arrival.towards}`).removeClass("center");;
                     right_node.text(tts_text);
                 }
 
                 write(arrivals[0], 1, board_line_1_left, board_line_1_right);
                 write(arrivals[1], 2, board_line_2_left, board_line_2_right);
 
+                if (arrivals[0].time_to_station < 10) {
+                    board_line_2_left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
+                }
+
                 let next_query_time = Math.max(Math.min(
-                    arrivals[0]?.time_to_station % 30 || 30, 
-                    arrivals[1]?.time_to_station % 30 || 30, 
+                    arrivals[0]?.time_to_station % 30 || 30,
+                    arrivals[1]?.time_to_station % 30 || 30,
                     30 // max of 30 seconds between requests
                 ), 5); // min of 5 seconds between requests
+
+                if (next_query_time < 30) {
+                    next_query_time = 10; // refreshes faster if a train is close
+                }
 
                 if ([NaN, undefined, null].includes(next_query_time)) {
                     next_query_time = 30;
