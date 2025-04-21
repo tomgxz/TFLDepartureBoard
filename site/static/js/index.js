@@ -265,6 +265,154 @@ class TFL_API_Handler {
 }
 
 
+class BoardDomHandler {
+    static shared = new BoardDomHandler($(".board-wrapper .board-line-1"), $(".board-wrapper .board-line-2"), $(".board-wrapper .board-line-3"));
+
+    constructor(dom_line1, dom_line2, dom_line3) {
+        this.line = null;
+        this.station = null;
+        this.platform = null;
+
+        this.changed = true;
+        this.query_timeout = null;
+
+        this.dom = {
+            line1: {
+                wrapper: dom_line1,
+                left: dom_line1.find("> span:nth-child(1)"),
+                right: dom_line1.find("> span:nth-child(2)"),
+            },
+            line2: {
+                wrapper: dom_line2,
+                left: dom_line2.find("> span:nth-child(1)"),
+                right: dom_line2.find("> span:nth-child(2)"),
+            },
+            line3: {
+                wrapper: dom_line3,
+                center: dom_line3.find("> span:nth-child(1)"),
+            },
+        }
+
+        this.start_clock()
+    }
+
+    start_clock() {
+        setInterval(() => {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            this.dom.line3.center.html(`${hours}:${minutes}:<small>${seconds}</small>`);
+        }, 500);
+    }
+
+    clear() {
+        this.dom.line1.left.html("<br>").removeClass("center");
+        this.dom.line1.right.html("<br>");
+        this.dom.line2.left.html("<br>").removeClass("center");
+        this.dom.line2.right.html("<br>");
+    }
+    
+    write_arrival_line(arrival, index, line_number) {
+        if (!arrival) return;
+
+        let tts_text = arrival.time_to_station >= 30 ? `${Math.round(arrival.time_to_station / 60)} min` : "Due";
+
+        this.dom[`line${line_number}`].left.text(`${index}  ${arrival.towards}`).removeClass("center");;
+        this.dom[`line${line_number}`].right.text(tts_text);
+    }
+
+    update_board_text = () => {
+        if (this.line && this.station && this.platform) {
+            if (this.changed) {
+                this.changed = false;
+                this.clear();
+    
+                if (this.query_timeout) {
+                    clearTimeout(this.query_timeout);
+                    this.query_timeout = null;
+                }
+    
+                let query_fn = async () => {
+                    let arrivals = await this.station.getTimetable(this.line, this.platform);
+    
+                    if (arrivals.length === 0) {
+                        this.clear();
+                        this.dom.line1.left.text("No trains arriving");
+                    }
+    
+                    this.write_arrival_line(arrivals[0], 1, 1);
+                    this.write_arrival_line(arrivals[1], 2, 2);
+    
+                    if (arrivals[0].time_to_station < 10) {
+                        this.dom.line2.left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
+                        this.dom.line2.right.text("")
+                    }
+    
+                    let next_query_time = Math.max(Math.min(
+                        arrivals[0]?.time_to_station % 30 || 30,
+                        arrivals[1]?.time_to_station % 30 || 30,
+                        30 // max of 30 seconds between requests
+                    ), 5); // min of 5 seconds between requests
+
+                    if ([NaN, undefined, null].includes(next_query_time)) {
+                        next_query_time = 30;
+                    }
+    
+                    if (next_query_time < 30) {
+                        next_query_time = 10; // refreshes faster if a train is close
+                    }
+
+    
+                    this.query_timeout = setTimeout(query_fn, next_query_time * 1000);
+                };
+    
+                query_fn();
+            }
+    
+        } else {
+            this.clear();
+        
+            this.dom.line1.left.text("London Underground Departures Board");
+        
+            if (!this.line) {
+                this.dom.line2.left.text("Select a line and station...");
+                return;
+            } else if (!this.station) {
+                this.dom.line2.left.text(`Select a station on the ${this.line.name} line...`);
+                return;
+            } else if (!this.platform) {
+                this.dom.line2.left.text("Select a platform...");
+                return;
+            }
+        }
+    }
+
+    set_line = line => {
+        this.line = line;
+        set_url_param("line", line ? line.id : null);
+        
+        this.set_station(null)
+        this.changed = true;
+    }
+    
+    set_station = station => {
+        this.station = station;
+        set_url_param("station", station ? station.id : null);
+        
+        this.set_platform(null);
+        this.changed = true;
+    }
+    
+    set_platform = platform => {
+        this.platform = platform;
+        set_url_param("platform", platform);
+    
+        this.changed = true;
+    }
+}
+
+
 // #region Option Select handling
 
 
@@ -305,10 +453,10 @@ const reset_select_platform = async () => {
 
     let text = "";
 
-    if (selected_line === null || selected_station === null) {
+    if (BoardDomHandler.shared.line === null || BoardDomHandler.shared.station === null) {
         text = "Select a line and station first";
 
-        if (selected_line !== null) {
+        if (BoardDomHandler.shared.line !== null) {
             text = "Select a station first";
         }
 
@@ -320,7 +468,7 @@ const reset_select_platform = async () => {
             $(`<option />`).attr("value", "").text(`Loading platforms...`)
         );
 
-        await selected_station.loadPlatforms(selected_line);
+        await BoardDomHandler.shared.station.loadPlatforms(BoardDomHandler.shared.line);
 
         options_platform_select.empty();
 
@@ -328,7 +476,7 @@ const reset_select_platform = async () => {
             $(`<option />`).attr("value", "").text(`Select a platform...`)
         );
         
-        for (let platform of selected_station.current_query_platforms) {
+        for (let platform of BoardDomHandler.shared.station.current_query_platforms) {
             options_platform_select.append(
                 $(`<option />`).attr("value", platform).text(platform)
             );
@@ -348,16 +496,16 @@ const on_select_change_line = () => {
     let line_id = options_line_select.val();
 
     if (line_id === "") {
-        set_line(null);
-        update_board_text();
+        BoardDomHandler.shared.set_line(null);
+        BoardDomHandler.shared.update_board_text();
 
         reset_select(options_station_select, "station", TFL_API_Handler.shared.undergroundStations);
         reset_select_platform();
         return;
     }
 
-    set_line(TFL_API_Handler.shared.undergroundLines[line_id]);
-    update_board_text();
+    BoardDomHandler.shared.set_line(TFL_API_Handler.shared.undergroundLines[line_id]);
+    BoardDomHandler.shared.update_board_text();
 
     reset_select(
         options_station_select, 
@@ -374,15 +522,15 @@ const on_select_change_station = () => {
     let station_id = options_station_select.val();
 
     if (station_id === "") {
-        set_station(null);
-        update_board_text();
+        BoardDomHandler.shared.set_station(null);
+        BoardDomHandler.shared.update_board_text();
 
         reset_select_platform();
         return;
     }
 
-    set_station(TFL_API_Handler.shared.undergroundStations[station_id]);
-    update_board_text();
+    BoardDomHandler.shared.set_station(TFL_API_Handler.shared.undergroundStations[station_id]);
+    BoardDomHandler.shared.update_board_text();
     
     reset_select_platform();
 }
@@ -392,131 +540,14 @@ const on_select_change_platform = () => {
     let platform = options_platform_select.val();
 
     if (platform === "") {
-        set_platform(null);
-        update_board_text();
+        BoardDomHandler.shared.set_platform(null);
+        BoardDomHandler.shared.update_board_text();
 
         return;
     }
 
-    set_platform(platform);
-    update_board_text();
-}
-
-
-const set_line = line => {
-    selected_line = line;
-    set_url_param("line", line ? line.id : null);
-
-    selected_station = null;
-    set_url_param("station", null);
-
-    selected_platform = null;
-    set_url_param("platform", null);
-
-    changed_since_last_query = true;
-}
-
-const set_station = station => {
-    selected_station = station;
-    set_url_param("station", station ? station.id : null);
-
-    selected_platform = null;
-    set_url_param("platform", null);
-
-    changed_since_last_query = true;
-}
-
-const set_platform = platform => {
-    selected_platform = platform;
-    set_url_param("platform", platform);
-
-    changed_since_last_query = true;
-}
-
-// #endregion
-
-
-// #region Board text handling
-
-const clear_board_text = () => {
-    board_line_1_left.html("<br>").removeClass("center");
-    board_line_1_right.html("<br>");
-    board_line_2_left.html("<br>").removeClass("center");
-    board_line_2_right.html("<br>");
-}
-
-
-const update_board_text = () => {
-    if (selected_line && selected_station && selected_platform) {
-        if (changed_since_last_query) {
-            changed_since_last_query = false;
-            clear_board_text();
-
-            if (arrival_query_timeout) {
-                clearTimeout(arrival_query_timeout);
-                arrival_query_timeout = null;
-            }
-
-            let query_fn = async () => {
-                let arrivals = await selected_station.getTimetable(selected_line, selected_platform);
-
-                if (arrivals.length === 0) {
-                    clear_board_text();
-                    board_line_1_left.text("No trains arriving");
-                }
-
-                const write = (arrival, index, left_node, right_node) => {
-                    if (!arrival) return;
-
-                    let tts_text = arrival.time_to_station >= 30 ? `${Math.round(arrival.time_to_station / 60)} min` : "Due";
-
-                    left_node.text(`${index}  ${arrival.towards}`).removeClass("center");;
-                    right_node.text(tts_text);
-                }
-
-                write(arrivals[0], 1, board_line_1_left, board_line_1_right);
-                write(arrivals[1], 2, board_line_2_left, board_line_2_right);
-
-                if (arrivals[0].time_to_station < 10) {
-                    board_line_2_left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
-                }
-
-                let next_query_time = Math.max(Math.min(
-                    arrivals[0]?.time_to_station % 30 || 30,
-                    arrivals[1]?.time_to_station % 30 || 30,
-                    30 // max of 30 seconds between requests
-                ), 5); // min of 5 seconds between requests
-
-                if (next_query_time < 30) {
-                    next_query_time = 10; // refreshes faster if a train is close
-                }
-
-                if ([NaN, undefined, null].includes(next_query_time)) {
-                    next_query_time = 30;
-                }
-
-                arrival_query_timeout = setTimeout(query_fn, next_query_time * 1000);
-            };
-
-            query_fn();
-        }
-
-    } else {
-        clear_board_text();
-    
-        board_line_1_left.text("London Underground Departures Board");
-    
-        if (!selected_line) {
-            board_line_2_left.text("Select a line and station...");
-            return;
-        } else if (!selected_station) {
-            board_line_2_left.text(`Select a station on the ${selected_line.name} line...`);
-            return;
-        } else if (!selected_platform) {
-            board_line_2_left.text("Select a platform...");
-            return;
-        }
-    }
+    BoardDomHandler.shared.set_platform(platform);
+    BoardDomHandler.shared.update_board_text();
 }
 
 // #endregion
@@ -543,17 +574,8 @@ const set_url_param = (key, value) => {
 const options_wrapper = $(".options-wrapper"),
       options_line_select = options_wrapper.find("#option_line_select"),
       options_station_select = options_wrapper.find("#option_station_select"),
-      options_platform_select = options_wrapper.find("#option_platform_select"),
-      
-      board_wrapper = $(".board-wrapper"),
-      board_line_1 = board_wrapper.find(".board-line-1"),
-      board_line_2 = board_wrapper.find(".board-line-2"),
-      board_line_3 = board_wrapper.find(".board-line-3"),
-      
-      board_line_1_left = board_line_1.find("> span:nth-child(1)"),
-      board_line_1_right = board_line_1.find("> span:nth-child(2)"),
-      board_line_2_left = board_line_2.find("> span:nth-child(1)"),
-      board_line_2_right = board_line_2.find("> span:nth-child(2)");
+      options_platform_select = options_wrapper.find("#option_platform_select");
+
 
 const url_paramaters = {};
 
@@ -561,27 +583,13 @@ for (let [key, value] of new URLSearchParams(window.location.search).entries()) 
     url_paramaters[key] = value
 }
 
-let selected_line = null, 
-    selected_station = null, 
-    selected_platform = null,
-    arrival_query_timeout = null,
-    changed_since_last_query = false;
-
 
 $(window).on("load", async () => {
     options_line_select.on("change", on_select_change_line);
     options_station_select.on("change", on_select_change_station);
     options_platform_select.on("change", on_select_change_platform);
 
-    setInterval(() => {
-        const now = new Date();
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const seconds = now.getSeconds().toString().padStart(2, '0');
-        board_line_3.html(`${hours}:${minutes}:<small>${seconds}</small>`);
-    }, 500);
-
-    update_board_text();
+    BoardDomHandler.shared.update_board_text();
 
     while (!TFL_API_Handler.shared.loaded) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -592,24 +600,26 @@ $(window).on("load", async () => {
     let platform_id = url_paramaters.platform;
 
     if (line_id && TFL_API_Handler.shared.undergroundLines[line_id]) {
-        selected_line = TFL_API_Handler.shared.undergroundLines[line_id];
+        BoardDomHandler.shared.line = TFL_API_Handler.shared.undergroundLines[line_id];
         options_line_select.val(line_id);
         on_select_change_line();
 
         if (station_id && TFL_API_Handler.shared.undergroundStations[station_id]) {
-            selected_station = TFL_API_Handler.shared.undergroundStations[station_id];
+            BoardDomHandler.shared.station = TFL_API_Handler.shared.undergroundStations[station_id];
             options_station_select.val(station_id);
             on_select_change_station();
 
             if (platform_id) {
                 await reset_select_platform();
                 
-                if (selected_station.current_query_platforms.includes(platform_id)) {
-                    selected_platform = platform_id;
+                if (BoardDomHandler.shared.station.current_query_platforms.includes(platform_id)) {
+                    BoardDomHandler.shared.platform = platform_id;
                     options_platform_select.val(platform_id);
                     on_select_change_platform();
                 }
             }
         }
     }
+
+    console.log(BoardDomHandler.shared)
 });
