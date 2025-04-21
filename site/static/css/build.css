@@ -73,6 +73,10 @@ body .page-content .board-wrapper .board--underground .board-line-2 {
   align-items: center;
 }
 body .page-content .board-wrapper .board--underground .board-line-3 {
+  justify-content: space-between;
+  align-items: center;
+}
+body .page-content .board-wrapper .board--underground .board-line-4 {
   justify-content: center;
   align-items: end;
   font-family: "London Underground Bold", "London Underground Regular", monospace;

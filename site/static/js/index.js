@@ -266,9 +266,9 @@ class TFL_API_Handler {
 
 
 class BoardDomHandler {
-    static shared = new BoardDomHandler($(".board-wrapper .board-line-1"), $(".board-wrapper .board-line-2"), $(".board-wrapper .board-line-3"));
+    static shared = new BoardDomHandler($(".board-wrapper .board-line-1"), $(".board-wrapper .board-line-2"), $(".board-wrapper .board-line-3"), $(".board-wrapper .board-line-4"));
 
-    constructor(dom_line1, dom_line2, dom_line3) {
+    constructor(dom_line1, dom_line2, dom_line3, dom_line4) {
         this.line = null;
         this.station = null;
         this.platform = null;
@@ -289,7 +289,12 @@ class BoardDomHandler {
             },
             line3: {
                 wrapper: dom_line3,
-                center: dom_line3.find("> span:nth-child(1)"),
+                left: dom_line3.find("> span:nth-child(1)"),
+                right: dom_line3.find("> span:nth-child(2)"),
+            },
+            line4: {
+                wrapper: dom_line4,
+                center: dom_line4.find("> span:nth-child(1)"),
             },
         }
 
@@ -302,7 +307,7 @@ class BoardDomHandler {
             const hours = now.getHours().toString().padStart(2, '0');
             const minutes = now.getMinutes().toString().padStart(2, '0');
             const seconds = now.getSeconds().toString().padStart(2, '0');
-            this.dom.line3.center.html(`${hours}:${minutes}:<small>${seconds}</small>`);
+            this.dom.line4.center.html(`${hours}:${minutes}:<small>${seconds}</small>`);
         }, 500);
     }
 
@@ -311,6 +316,8 @@ class BoardDomHandler {
         this.dom.line1.right.html("<br>");
         this.dom.line2.left.html("<br>").removeClass("center");
         this.dom.line2.right.html("<br>");
+        this.dom.line3.left.html("<br>").removeClass("center");
+        this.dom.line3.right.html("<br>");
     }
     
     write_arrival_line(arrival, index, line_number) {
@@ -343,15 +350,17 @@ class BoardDomHandler {
     
                     this.write_arrival_line(arrivals[0], 1, 1);
                     this.write_arrival_line(arrivals[1], 2, 2);
+                    this.write_arrival_line(arrivals[2], 3, 3);
     
                     if (arrivals[0].time_to_station < 10) {
-                        this.dom.line2.left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
-                        this.dom.line2.right.text("")
+                        this.dom.line3.left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
+                        this.dom.line3.right.text("")
                     }
     
                     let next_query_time = Math.max(Math.min(
                         arrivals[0]?.time_to_station % 30 || 30,
                         arrivals[1]?.time_to_station % 30 || 30,
+                        arrivals[2]?.time_to_station % 30 || 30,
                         30 // max of 30 seconds between requests
                     ), 5); // min of 5 seconds between requests
 
@@ -363,7 +372,6 @@ class BoardDomHandler {
                         next_query_time = 10; // refreshes faster if a train is close
                     }
 
-    
                     this.query_timeout = setTimeout(query_fn, next_query_time * 1000);
                 };
     

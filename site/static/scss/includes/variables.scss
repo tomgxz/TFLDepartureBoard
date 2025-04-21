@@ -50,6 +50,10 @@ $board-maps: (
                 align: center
             ),
             3: (
+                justify: space-between,
+                align: center
+            ),
+            4: (
                 justify: center,
                 align: end,
                 font: $font-underground-bold,
