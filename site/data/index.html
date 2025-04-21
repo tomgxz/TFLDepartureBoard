@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-type" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>About the Data - TFL Station Board</title>
+
+<!-- Site Meta -->
+<meta name="title" content="About the Data - TFL Station Board">
+<meta name="description" content="Description">
+<meta name="robots" content="index, follow">
+<meta name="language" content="English">
+<meta name="author" content="Tom_gxz">
+<meta name="keywords" content="keywords">
+
+<meta name="apple-mobile-web-app-title" content="About the Data - TFL Station Board">
+<meta name="application-name" content="About the Data - TFL Station Board">
+<meta name="theme-color" content="#ffb308">
+
+<link rel="canonical" href="SITEURL">
+
+<!-- Internal Stylesheet Imports -->
+<link href="/static/css/data.css" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+    <div class="page-content">
+
+        <h1>About the Data Used by This Site</h1>
+        <br>
+
+        <h2>TFL - Underground Line Data</h2>
+
+        <p>
+            This site uses data provided by <a href="https://api.tfl.gov.uk/" target="_blank" rel="noopener noreferrer">TFL's Open Data API</a>.
+            The API provides information about London Underground lines, stations, and platforms, as well as many other modes of transport
+            not yet used by this site. <br> <br>
+
+            The API is not fun to use. It has a load-balancer that regularly returns data that is older than the data returned in the previous 
+            request. Updates can be up to 60 seconds delayed. It provides very little and conflicting platform information, and provides very little
+            documentation on using websockets. <br> <br>
+
+            This site currently pushes regular GET requests to the API to get the latest arrival data. I am currently working on moving to 
+            using websockets, but TFL provide little to no documentation on their use.
+        </p>
+        
+        <ul>
+            <li>
+                <strong>Lines:</strong> When the page loads, it queries the API for every tube line. <br>
+                Accessed via <a href="https://api.tfl.gov.uk/Line/Mode/tube" target="_blank" rel="noopener noreferrer">https://api.tfl.gov.uk/Line/Mode/tube</a>
+            </li>
+
+            <li>
+                <strong>Stations:</strong> When the page loads it queries every underground station by using the type <code>NaptanMetroStation</code>. <br>
+                Accessed via <a href="https://api.tfl.gov.uk/StopPoint/Type/NaptanMetroStation" target="_blank" rel="noopener noreferrer">https://api.tfl.gov.uk/StopPoint/Type/NaptanMetroStation</a>
+            </li>
+
+            <li>
+                <strong>Platforms:</strong> Due to the limitations of the API, getting information about platforms is quite difficult. <br>
+                As a workaround, the site accesses the next arrivals at a station when it is selected by the user, and then intuits the platform information from that data.
+            </li>
+
+            <li>
+                <strong>Arrivals:</strong> Arrivals are queried per station and per line. <br>
+                The interval of queries is determined by the closest train to the station by time. <br>
+                Accessed via <a href="https://api.tfl.gov.uk/Line/Northern/Arrivals/9400ZZLULNB" target="_blank" rel="noopener noreferrer">https://api.tfl.gov.uk/Line/{Line Name}/Arrivals/{Station Naptan Code}</a>
+            </li>
+        </ul>
+        <p>
+            This site is not affiliated with Transport for London (TFL). 
+            The data is provided as-is and may be subject to inaccuracies or delays.
+        </p>
+
+    </div>
+
+</body>
+
+</html>

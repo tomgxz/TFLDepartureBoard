@@ -1,4 +1,4 @@
-:root, select, label {
+* {
     font-family: monospace;
 }
 
@@ -9,108 +9,23 @@ body {
     height: 100vh;
     padding: 0;
     margin: 0;
-    
-    .page-content {
-        width: inherit;
-        height: inherit;
+    position: relative;
+
+    footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
         display: flex;
-        justify-content: space-between;
+        flex-wrap: nowrap;
+        justify-content: center;
         align-items: center;
-        overflow: hidden;
-        column-gap: 2rem;
-
-        @media (max-width: 1000px) {
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            row-gap: 2rem;
-        }
-
-        .board-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            flex-grow: 1;
-
-            .board {
-                display: flex;
-                flex-direction: column;
-                align-items: left;
-                justify-content: start;
-                height: fit-content;
-
-                .board-line {
-                    display: flex;
-                }
-
-                @each $name, $board-map in $board-maps {
-                    &--#{$name} {
-                        background-color: map-get($board-map, bg-base-color);
-                        border: 1px solid map-get($board-map, border-color);
-                        color: map-get($board-map, text-color);
-                        width: map-get($board-map, width);
-                        font-family: map-get($board-map, font);
-                        font-size: map-get($board-map, font-size);
-
-                        padding: map-get($board-map, lines, all, inset);
-                        row-gap: map-get($board-map, lines, all, gap);
-                        
-                        .board-line {
-                            @each $line-index, $line-map in map-get($board-map, lines) {
-                                &-#{$line-index} {
-                                    justify-content: map-get($line-map, justify);
-                                    align-items: map-get($line-map, align);
-                                    
-                                    font-family: map-get($line-map, font);
-                                    font-size: map-get($line-map, font-size);
-    
-                                    @if map-get($line-map, justify) == center {
-                                        margin-left: auto;
-                                        margin-right: auto;
-                                    }
-                                }
-                            }
-
-                            > span:first-child {
-                                flex-grow: 1;
-
-                                &.center {
-                                    text-align: center;
-                                }
-                            }
-                        }
-
-                    }
-                }
-            }
-        }
-
-        .options-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-            margin-top: auto;
-            margin-bottom: auto;
-
-            @media (max-width: 1000px) {
-                margin-bottom: 1rem;
-                margin-right: auto;
-                margin-left: auto;
-            }
-
-            .options {
-
-                .option-group {
-                    display: flex;
-                    flex-direction: column;
-
-                    &:not(:last-child) {
-                        margin-bottom: 1rem;
-                    }
-                }
-            }
-        }
+        padding-bottom: 0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
+}
+
+a {
+    color: $primary;
 }

@@ -6,7 +6,7 @@
   font-family: "London Underground Bold";
   src: url("../font/London Underground Bold.ttf") format("truetype");
 }
-:root, select, label {
+* {
   font-family: monospace;
 }
 
@@ -17,8 +17,27 @@ body {
   height: 100vh;
   padding: 0;
   margin: 0;
+  position: relative;
 }
-body .page-content {
+body footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+a {
+  color: #ffc800;
+}
+
+.page-content {
   width: inherit;
   height: inherit;
   display: flex;
@@ -29,21 +48,21 @@ body .page-content {
        column-gap: 2rem;
 }
 @media (max-width: 1000px) {
-  body .page-content {
+  .page-content {
     flex-direction: column;
     justify-content: center;
     align-items: center;
     row-gap: 2rem;
   }
 }
-body .page-content .board-wrapper {
+.page-content .board-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
   flex-grow: 1;
 }
-body .page-content .board-wrapper .board {
+.page-content .board-wrapper .board {
   display: flex;
   flex-direction: column;
   align-items: left;
@@ -51,45 +70,63 @@ body .page-content .board-wrapper .board {
   height: -moz-fit-content;
   height: fit-content;
 }
-body .page-content .board-wrapper .board .board-line {
+.page-content .board-wrapper .board .board-line {
   display: flex;
 }
-body .page-content .board-wrapper .board--underground {
+.page-content .board-wrapper .board--underground {
   background-color: #2e2e2e;
   border: 1px solid #ffc800;
   color: #ffc800;
   width: 42ch;
-  font-family: "London Underground Regular", monospace;
+  font-family: "London Underground Regular", monospace !important;
   font-size: calc(0.5rem + 1vw);
   padding: 0.2rem 0.5rem;
   row-gap: 0.2rem;
 }
-body .page-content .board-wrapper .board--underground .board-line-1 {
+.page-content .board-wrapper .board--underground * {
+  font-family: "London Underground Regular", monospace !important;
+}
+.page-content .board-wrapper .board--underground .board-line-all * {
+  font-family: !important;
+}
+.page-content .board-wrapper .board--underground .board-line-1 {
   justify-content: space-between;
   align-items: center;
 }
-body .page-content .board-wrapper .board--underground .board-line-2 {
+.page-content .board-wrapper .board--underground .board-line-1 * {
+  font-family: !important;
+}
+.page-content .board-wrapper .board--underground .board-line-2 {
   justify-content: space-between;
   align-items: center;
 }
-body .page-content .board-wrapper .board--underground .board-line-3 {
+.page-content .board-wrapper .board--underground .board-line-2 * {
+  font-family: !important;
+}
+.page-content .board-wrapper .board--underground .board-line-3 {
   justify-content: space-between;
   align-items: center;
 }
-body .page-content .board-wrapper .board--underground .board-line-4 {
+.page-content .board-wrapper .board--underground .board-line-3 * {
+  font-family: !important;
+}
+.page-content .board-wrapper .board--underground .board-line-4 {
   justify-content: center;
   align-items: end;
   font-family: "London Underground Bold", "London Underground Regular", monospace;
   margin-left: auto;
   margin-right: auto;
 }
-body .page-content .board-wrapper .board--underground .board-line > span:first-child {
+.page-content .board-wrapper .board--underground .board-line-4 * {
+  font-family: "London Underground Bold", "London Underground Regular", monospace !important;
+}
+.page-content .board-wrapper .board--underground .board-line > span:first-child {
   flex-grow: 1;
 }
-body .page-content .board-wrapper .board--underground .board-line > span:first-child.center {
+.page-content .board-wrapper .board--underground .board-line > span:first-child.center {
   text-align: center;
 }
-body .page-content .options-wrapper {
+.page-content .options-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,17 +135,17 @@ body .page-content .options-wrapper {
   margin-bottom: auto;
 }
 @media (max-width: 1000px) {
-  body .page-content .options-wrapper {
-    margin-bottom: 1rem;
+  .page-content .options-wrapper {
+    margin-bottom: 4rem;
     margin-right: auto;
     margin-left: auto;
   }
 }
-body .page-content .options-wrapper .options .option-group {
+.page-content .options-wrapper .options .option-group {
   display: flex;
   flex-direction: column;
 }
-body .page-content .options-wrapper .options .option-group:not(:last-child) {
+.page-content .options-wrapper .options .option-group:not(:last-child) {
   margin-bottom: 1rem;
 }
 

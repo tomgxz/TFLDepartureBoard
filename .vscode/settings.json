@@ -10,6 +10,7 @@
 
     "liveSassCompile.settings.includeItems": [
         "/site/static/scss/build.scss",
+        "/site/static/scss/data.scss",
     ],
 
     "liveServer.settings.root": "/site/"

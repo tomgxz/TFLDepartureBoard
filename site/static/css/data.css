@@ -1,0 +1,58 @@
+@font-face {
+  font-family: "London Underground Regular";
+  src: url("../font/London Underground Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "London Underground Bold";
+  src: url("../font/London Underground Bold.ttf") format("truetype");
+}
+:root, select, label, footer {
+  font-family: monospace;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+  position: relative;
+}
+body footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+a {
+  color: #ffc800;
+}
+
+body {
+  height: -moz-fit-content;
+  height: fit-content;
+}
+body .page-content {
+  margin-top: 0.5rem;
+  margin-left: 3rem;
+  margin-right: 3rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+code {
+  background-color: #495057;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.25rem;
+}/*# sourceMappingURL=data.css.map */
