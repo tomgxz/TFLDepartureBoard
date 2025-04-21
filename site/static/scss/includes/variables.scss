@@ -1,15 +1,28 @@
 $white: #ffffff;
 $black: #000000;
 
+@font-face {
+    font-family: 'London Underground Regular';
+    src: url('../font/London Underground Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'London Underground Bold';
+    src: url('../font/London Underground Bold.ttf') format('truetype');
+}
+
+$font-underground-regular: "London Underground Regular", monospace;
+$font-underground-bold: "London Underground Bold", $font-underground-regular;
+
 $board-maps: (
     underground: (
         bg-base-color: #2e2e2e,
         bg-accent-color: #46474b,
         border-color: #ffc800,
         text-color: #ffc800,
-        width: 64ch,
-        font: monospace,
-        font-size: 1.2rem,
+        width: 42ch,
+        font: $font-underground-regular,
+        font-size: calc(0.5rem + 1vw),
         lines: (
             all: (
                 inset: 0.2rem 0.5rem,
@@ -26,7 +39,8 @@ $board-maps: (
             ),
             3: (
                 justify: center,
-                align: end
+                align: end,
+                font: $font-underground-bold,
             ),
         )
     ),

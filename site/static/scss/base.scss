@@ -50,6 +50,9 @@ body {
                                 &-#{$line-index} {
                                     justify-content: map-get($line-map, justify);
                                     align-items: map-get($line-map, align);
+                                    
+                                    font-family: map-get($line-map, font);
+                                    font-size: map-get($line-map, font-size);
     
                                     @if map-get($line-map, justify) == center {
                                         margin-left: auto;
