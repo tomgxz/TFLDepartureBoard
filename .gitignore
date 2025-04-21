@@ -1,4 +1,5 @@
 /response.json
+*.ai
 
 # General
 .DS_Store
