@@ -14,7 +14,7 @@ class UndergroundLine_Station {
     constructor(id, json_source, name, modes, stopType, placeType, lines, platforms, lat, lon, zone) {
         this.id = id;
         this.json_source = json_source;
-        this.name = name;
+        this.name = name.replace(" Underground Station", "");
         this.modes = modes;
         this.stopType = stopType;
         this.placeType = placeType;
@@ -32,12 +32,12 @@ class UndergroundLine_Station {
         if (!this.loaded) {console.warn("Station not loaded"); return; }
         if (!line.loaded) {console.warn("Line not loaded"); return;}
 
-        let response = await TFL_API_Handler.shared.get(`Line/${line.id}/Arrivals/${this.id}`);
+        let response = await TFL_API.get(`Line/${line.id}/Arrivals/${this.id}`);
         let arrivals = [];
 
         for (let arrival of response) {
             if (arrival.platformName === platform_name) {
-                let destination = TFL_API_Handler.shared.undergroundStations[arrival.destinationNaptan];
+                let destination = TFL_API.undergroundStations[arrival.destinationNaptan];
 
                 arrivals.push(
                     new UndergroundLine_Arrival(
@@ -50,7 +50,8 @@ class UndergroundLine_Station {
                         destination,
                         arrival.towards,
                         arrival.timeToStation,
-                        arrival.expectedArrival
+                        arrival.expectedArrival,
+                        arrival.timing.read
                     )
                 );
             }
@@ -64,7 +65,7 @@ class UndergroundLine_Station {
     async loadPlatforms(line) {
         this.loaded = false;
 
-        let response = await TFL_API_Handler.shared.get(`Line/${line.id}/Arrivals/${this.id}`);
+        let response = await TFL_API.get(`Line/${line.id}/Arrivals/${this.id}`);
         let platform_names = [];
 
         for (let arrival of response) {
@@ -96,7 +97,7 @@ class UndergroundLine_Station {
  * @param {string|Date} expected - The expected arrival time of the train, as a string or Date object.
  */
 class UndergroundLine_Arrival {
-    constructor(id, json_source, line, station, platform, current_loc, destination, towards, time_to_station, expected) {
+    constructor(id, json_source, line, station, platform, current_loc, destination, towards, time_to_station, expected, request_time) {
         this.id = id;
         this.json_source = json_source;
         this.line = line;
@@ -107,6 +108,7 @@ class UndergroundLine_Arrival {
         this.towards = towards;
         this.time_to_station = time_to_station;
         this.expected = new Date(expected);
+        this.request_time = new Date(request_time);
 
         this.loaded = true;
     }
@@ -127,35 +129,33 @@ class UndergroundLine_Platform {
 */
 
 
-class TFL_API_Handler {
-    static shared = new TFL_API_Handler();
+const TFL_API = (function() {
+    const base_url = "https://api.tfl.gov.uk/";
+    const app_key = "aef507ce475644f8a5a64d5d64652bf1";
 
-    constructor() {
-        this.base_url = "https://api.tfl.gov.uk";
-        this.app_key = "aef507ce475644f8a5a64d5d64652bf1";
-        this.loaded = false;
+    var loaded = false;
+    var undergroundLines = {};
+    var undergroundStations = {};
 
-        this.load();
-    }
-    
-    async get(url, type = "json") {
-        let content_type = "application/json";
-
-        if (type === "xml") {
-            content_type = "";
+    async function get(url, bypass) {
+        if (!loaded && !bypass) {
+            console.warn("TFL API Handler not loaded");
+            return;
         }
+
+        let content_type = "application/json";
 
         let response;
         let retryAfter = 10;
 
         while (true) {
             response = await fetch(
-                `${this.base_url}/${url}`, {
+                `${base_url}${url}`, {
                     method: "GET",
                     headers: {
                         "Cache-Control": "no-cache",
                         "Content-Type": content_type,
-                        "app_key": this.app_key,
+                        "app_key": app_key,
                     }
                 }
             );
@@ -175,33 +175,24 @@ class TFL_API_Handler {
             }
         }
 
-        if (type === "xml") {
-            let text = await response.text();
-            let parser = new DOMParser();
-            let xmlDoc = parser.parseFromString(text, "text/xml");
-            return xmlDoc;
-        }
-
         return response.json();
     }
 
-    async load() {
-        this.undergroundLines = {};
-        this.undergroundStations = {};
 
-        let underground_lines_json = await this.get(`Line/Mode/tube`);
+    async function load() {
+        let underground_lines_json = await get(`Line/Mode/tube`, true);
 
-        let stations_json = await this.get(`StopPoint/Type/NaptanMetroStation`);
-        // let station_platforms_json = await this.get(`StopPoint/Type/NaptanMetroPlatform`);
+        let stations_json = await get(`StopPoint/Type/NaptanMetroStation`, true);
+        // let station_platforms_json = await get(`StopPoint/Type/NaptanMetroPlatform`);
 
         underground_lines_json.forEach(async (line) => {
             let services = line.serviceTypes.map((serviceType) => serviceType.name);
-            this.undergroundLines[line.id] = new UndergroundLine(line.id, line, line.name, services);
+            undergroundLines[line.id] = new UndergroundLine(line.id, line, line.name, services);
         });
 
         await stations_json.forEach(async (station) => {
             let zone = null;
-            let lines = station.lines.map(line => this.undergroundLines[line.id]).filter(line => line !== undefined);
+            let lines = station.lines.map(line => undergroundLines[line.id]).filter(line => line !== undefined);
             let platforms = [];
 
             for (let additionalProperty of station.additionalProperties) {
@@ -236,7 +227,7 @@ class TFL_API_Handler {
             }
             */
 
-            this.undergroundStations[station.id] = new UndergroundLine_Station(
+            undergroundStations[station.id] = new UndergroundLine_Station(
                 station.id,
                 station,
                 station.commonName,
@@ -251,110 +242,123 @@ class TFL_API_Handler {
             );
 
             for (let line of lines) {
-                line.stations[station.id] = this.undergroundStations[station.id];
+                line.stations[station.id] = undergroundStations[station.id];
             }
         });
 
-        for (let line_id of Object.keys(this.undergroundLines)) {
-            this.undergroundLines[line_id].loaded = true;
+        for (let line_id of Object.keys(undergroundLines)) {
+            undergroundLines[line_id].loaded = true;
         }
 
+        loaded = true;
         update_select_options();
-        this.loaded = true;
     }
-}
+    
+    load();
 
-
-class BoardDomHandler {
-    static shared = new BoardDomHandler($(".board-wrapper .board-line-1"), $(".board-wrapper .board-line-2"), $(".board-wrapper .board-line-3"), $(".board-wrapper .board-line-4"));
-
-    constructor(dom_line1, dom_line2, dom_line3, dom_line4) {
-        this.line = null;
-        this.station = null;
-        this.platform = null;
-
-        this.changed = true;
-        this.query_timeout = null;
-
-        this.dom = {
-            line1: {
-                wrapper: dom_line1,
-                left: dom_line1.find("> span:nth-child(1)"),
-                right: dom_line1.find("> span:nth-child(2)"),
-            },
-            line2: {
-                wrapper: dom_line2,
-                left: dom_line2.find("> span:nth-child(1)"),
-                right: dom_line2.find("> span:nth-child(2)"),
-            },
-            line3: {
-                wrapper: dom_line3,
-                left: dom_line3.find("> span:nth-child(1)"),
-                right: dom_line3.find("> span:nth-child(2)"),
-            },
-            line4: {
-                wrapper: dom_line4,
-                center: dom_line4.find("> span:nth-child(1)"),
-            },
-        }
-
-        this.start_clock()
+    return {
+        loaded: loaded,
+        undergroundLines: undergroundLines,
+        undergroundStations: undergroundStations,
+        get: get
     }
+})();
 
-    start_clock() {
+
+const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
+    var line = null, station = null, platform = null;
+    var changed = true;
+    var query_timeout = null;
+    var last_query_time = null;
+
+    var dom = {
+        line1: {
+            wrapper: dom_line1,
+            left: dom_line1.find("> span:nth-child(1)"),
+            right: dom_line1.find("> span:nth-child(2)"),
+        },
+        line2: {
+            wrapper: dom_line2,
+            left: dom_line2.find("> span:nth-child(1)"),
+            right: dom_line2.find("> span:nth-child(2)"),
+        },
+        line3: {
+            wrapper: dom_line3,
+            left: dom_line3.find("> span:nth-child(1)"),
+            right: dom_line3.find("> span:nth-child(2)"),
+        },
+        line4: {
+            wrapper: dom_line4,
+            center: dom_line4.find("> span:nth-child(1)"),
+        },
+    };
+
+    function startClock() {
         setInterval(() => {
             const now = new Date();
             const hours = now.getHours().toString().padStart(2, '0');
             const minutes = now.getMinutes().toString().padStart(2, '0');
             const seconds = now.getSeconds().toString().padStart(2, '0');
-            this.dom.line4.center.html(`${hours}:${minutes}:<small>${seconds}</small>`);
+            dom.line4.center.html(`${hours}:${minutes}:<small>${seconds}</small>`);
         }, 500);
     }
 
-    clear() {
-        this.dom.line1.left.html("<br>").removeClass("center");
-        this.dom.line1.right.html("<br>");
-        this.dom.line2.left.html("<br>").removeClass("center");
-        this.dom.line2.right.html("<br>");
-        this.dom.line3.left.html("<br>").removeClass("center");
-        this.dom.line3.right.html("<br>");
+    function clear() {
+        dom.line1.left.html("<br>").removeClass("center");
+        dom.line1.right.html("<br>");
+        dom.line2.left.html("<br>").removeClass("center");
+        dom.line2.right.html("<br>");
+        dom.line3.left.html("<br>").removeClass("center");
+        dom.line3.right.html("<br>");
     }
-    
-    write_arrival_line(arrival, index, line_number) {
+
+    function writeArrivalLine(arrival, index, line_number) {
         if (!arrival) return;
 
         let tts_text = arrival.time_to_station >= 30 ? `${Math.round(arrival.time_to_station / 60)} min` : "Due";
 
-        this.dom[`line${line_number}`].left.text(`${index}  ${arrival.towards}`).removeClass("center");;
-        this.dom[`line${line_number}`].right.text(tts_text);
+        if (arrival.current_loc === "At Platform") {
+            tts_text = "Arrived";
+        }
+
+        dom[`line${line_number}`].left.text(`${index}  ${arrival.towards}`).removeClass("center");;
+        dom[`line${line_number}`].right.text(tts_text);
     }
 
-    update_board_text = () => {
-        if (this.line && this.station && this.platform) {
-            if (this.changed) {
-                this.changed = false;
-                this.clear();
+    function updateBoardText() {
+        if (line && station && platform) {
+            if (changed) {
+                changed = false;
+                clear();
     
-                if (this.query_timeout) {
-                    clearTimeout(this.query_timeout);
-                    this.query_timeout = null;
+                if (query_timeout) {
+                    clearTimeout(query_timeout);
+                    query_timeout = null;
                 }
     
                 let query_fn = async () => {
-                    let arrivals = await this.station.getTimetable(this.line, this.platform);
-    
+                    let arrivals = await station.getTimetable(line, platform);
+
                     if (arrivals.length === 0) {
-                        this.clear();
-                        this.dom.line1.left.text("No trains arriving");
+                        clear();
+                        dom.line1.left.text("No trains arriving");
                     }
-    
-                    this.write_arrival_line(arrivals[0], 1, 1);
-                    this.write_arrival_line(arrivals[1], 2, 2);
-                    this.write_arrival_line(arrivals[2], 3, 3);
+
+                    if (last_query_time && arrivals[0].request_time <= last_query_time) {
+                        console.warn("Query time is older than or same as previous query time. Skipping update.");
+                        query_timeout = setTimeout(query_fn, 5 * 1000);
+                        return;
+                    }
+
+                    last_query_time = arrivals[0].request_time;
+
+                    writeArrivalLine(arrivals[0], 1, 1);
+                    writeArrivalLine(arrivals[1], 2, 2);
+                    writeArrivalLine(arrivals[2], 3, 3);
     
                     if (arrivals[0].time_to_station < 10) {
-                        this.dom.line3.left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
-                        this.dom.line3.right.text("")
+                        dom.line3.left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
+                        dom.line3.right.text("")
                     }
     
                     let next_query_time = Math.max(Math.min(
@@ -372,53 +376,67 @@ class BoardDomHandler {
                         next_query_time = 10; // refreshes faster if a train is close
                     }
 
-                    this.query_timeout = setTimeout(query_fn, next_query_time * 1000);
+                    query_timeout = setTimeout(query_fn, next_query_time * 1000);
                 };
     
                 query_fn();
             }
     
         } else {
-            this.clear();
+            clear();
         
-            this.dom.line1.left.text("London Underground Departures Board");
+            dom.line1.left.text("London Underground Departures Board");
         
-            if (!this.line) {
-                this.dom.line2.left.text("Select a line and station...");
+            if (!line) {
+                dom.line2.left.text("Select a line and station...");
                 return;
-            } else if (!this.station) {
-                this.dom.line2.left.text(`Select a station on the ${this.line.name} line...`);
+            } else if (!station) {
+                dom.line2.left.text(`Select a station on the ${line.name} line...`);
                 return;
-            } else if (!this.platform) {
-                this.dom.line2.left.text("Select a platform...");
+            } else if (!platform) {
+                dom.line2.left.text("Select a platform...");
                 return;
             }
         }
     }
 
-    set_line = line => {
-        this.line = line;
+    function setLine(val) {
+        line = val;
         set_url_param("line", line ? line.id : null);
         
-        this.set_station(null)
-        this.changed = true;
+        setStation(null)
+        changed = true;
     }
     
-    set_station = station => {
-        this.station = station;
+    function setStation(val) {
+        station = val;
         set_url_param("station", station ? station.id : null);
         
-        this.set_platform(null);
-        this.changed = true;
+        setPlatform(null);
+        changed = true;
     }
     
-    set_platform = platform => {
-        this.platform = platform;
+    function setPlatform(val) {
+        platform = val;
         set_url_param("platform", platform);
     
-        this.changed = true;
+        changed = true;
+    }    
+
+    startClock();
+    clear();
+
+    return {
+        getLine: () => line, 
+        getStation: () => station, 
+        getPlatform: () => platform,
+        setLine: setLine,
+        setStation: setStation,
+        setPlatform: setPlatform,
+        updateBoardText: updateBoardText,
     }
-}
+
+})($(".board-wrapper .board-line-1"), $(".board-wrapper .board-line-2"), $(".board-wrapper .board-line-3"), $(".board-wrapper .board-line-4"));
 
 
 // #region Option Select handling
@@ -461,10 +479,10 @@ const reset_select_platform = async () => {
 
     let text = "";
 
-    if (BoardDomHandler.shared.line === null || BoardDomHandler.shared.station === null) {
+    if (BoardDomHandler.getLine() === null || BoardDomHandler.getStation() === null) {
         text = "Select a line and station first";
 
-        if (BoardDomHandler.shared.line !== null) {
+        if (BoardDomHandler.getLine() !== null) {
             text = "Select a station first";
         }
 
@@ -476,7 +494,7 @@ const reset_select_platform = async () => {
             $(`<option />`).attr("value", "").text(`Loading platforms...`)
         );
 
-        await BoardDomHandler.shared.station.loadPlatforms(BoardDomHandler.shared.line);
+        await BoardDomHandler.getStation().loadPlatforms(BoardDomHandler.getLine());
 
         options_platform_select.empty();
 
@@ -484,7 +502,7 @@ const reset_select_platform = async () => {
             $(`<option />`).attr("value", "").text(`Select a platform...`)
         );
         
-        for (let platform of BoardDomHandler.shared.station.current_query_platforms) {
+        for (let platform of BoardDomHandler.getStation().current_query_platforms) {
             options_platform_select.append(
                 $(`<option />`).attr("value", platform).text(platform)
             );
@@ -494,8 +512,8 @@ const reset_select_platform = async () => {
 
 
 const update_select_options = () => {
-    reset_select(options_line_select, "line", TFL_API_Handler.shared.undergroundLines);
-    reset_select(options_station_select, "station", TFL_API_Handler.shared.undergroundStations);
+    reset_select(options_line_select, "line", TFL_API.undergroundLines);
+    reset_select(options_station_select, "station", TFL_API.undergroundStations);
     reset_select_platform();
 }
 
@@ -504,21 +522,21 @@ const on_select_change_line = () => {
     let line_id = options_line_select.val();
 
     if (line_id === "") {
-        BoardDomHandler.shared.set_line(null);
-        BoardDomHandler.shared.update_board_text();
+        BoardDomHandler.setLine(null);
+        BoardDomHandler.updateBoardText();
 
-        reset_select(options_station_select, "station", TFL_API_Handler.shared.undergroundStations);
+        reset_select(options_station_select, "station", TFL_API.undergroundStations);
         reset_select_platform();
         return;
     }
 
-    BoardDomHandler.shared.set_line(TFL_API_Handler.shared.undergroundLines[line_id]);
-    BoardDomHandler.shared.update_board_text();
+    BoardDomHandler.setLine(TFL_API.undergroundLines[line_id]);
+    BoardDomHandler.updateBoardText();
 
     reset_select(
         options_station_select, 
         "station", 
-        TFL_API_Handler.shared.undergroundStations,
+        TFL_API.undergroundStations,
         [station => { return station.lines.some(line => line.id === line_id); }]
     );
 
@@ -530,15 +548,15 @@ const on_select_change_station = () => {
     let station_id = options_station_select.val();
 
     if (station_id === "") {
-        BoardDomHandler.shared.set_station(null);
-        BoardDomHandler.shared.update_board_text();
+        BoardDomHandler.setStation(null);
+        BoardDomHandler.updateBoardText();
 
         reset_select_platform();
         return;
     }
 
-    BoardDomHandler.shared.set_station(TFL_API_Handler.shared.undergroundStations[station_id]);
-    BoardDomHandler.shared.update_board_text();
+    BoardDomHandler.setStation(TFL_API.undergroundStations[station_id]);
+    BoardDomHandler.updateBoardText();
     
     reset_select_platform();
 }
@@ -548,14 +566,14 @@ const on_select_change_platform = () => {
     let platform = options_platform_select.val();
 
     if (platform === "") {
-        BoardDomHandler.shared.set_platform(null);
-        BoardDomHandler.shared.update_board_text();
+        BoardDomHandler.setPlatform(null);
+        BoardDomHandler.updateBoardText();
 
         return;
     }
 
-    BoardDomHandler.shared.set_platform(platform);
-    BoardDomHandler.shared.update_board_text();
+    BoardDomHandler.setPlatform(platform);
+    BoardDomHandler.updateBoardText();
 }
 
 // #endregion
@@ -597,37 +615,35 @@ $(window).on("load", async () => {
     options_station_select.on("change", on_select_change_station);
     options_platform_select.on("change", on_select_change_platform);
 
-    BoardDomHandler.shared.update_board_text();
+    BoardDomHandler.updateBoardText();
 
-    while (!TFL_API_Handler.shared.loaded) {
+    while (!TFL_API.loaded) {
         await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     let line_id = url_paramaters.line;
     let station_id = url_paramaters.station;
-    let platform_id = url_paramaters.platform;
+    let platform_name = url_paramaters.platform;
 
-    if (line_id && TFL_API_Handler.shared.undergroundLines[line_id]) {
-        BoardDomHandler.shared.line = TFL_API_Handler.shared.undergroundLines[line_id];
+    if (line_id && TFL_API.undergroundLines[line_id]) {
+        BoardDomHandler.setLine(TFL_API.undergroundLines[line_id]);
         options_line_select.val(line_id);
         on_select_change_line();
 
-        if (station_id && TFL_API_Handler.shared.undergroundStations[station_id]) {
-            BoardDomHandler.shared.station = TFL_API_Handler.shared.undergroundStations[station_id];
+        if (station_id && TFL_API.undergroundStations[station_id]) {
+            BoardDomHandler.setStation(TFL_API.undergroundStations[station_id]);
             options_station_select.val(station_id);
             on_select_change_station();
 
-            if (platform_id) {
+            if (platform_name) {
                 await reset_select_platform();
                 
-                if (BoardDomHandler.shared.station.current_query_platforms.includes(platform_id)) {
-                    BoardDomHandler.shared.platform = platform_id;
-                    options_platform_select.val(platform_id);
+                if (BoardDomHandler.getStation().current_query_platforms.includes(platform_name)) {
+                    BoardDomHandler.setPlatform(platform_name);
+                    options_platform_select.val(platform_name);
                     on_select_change_platform();
                 }
             }
         }
     }
-
-    console.log(BoardDomHandler.shared)
 });
