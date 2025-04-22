@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "command": "node server.js",
+            "name": "Serve",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+    ]
+}

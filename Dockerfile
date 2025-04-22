@@ -1,2 +1,12 @@
-FROM nginx:alpine
-COPY site /usr/share/nginx/html
+FROM node:slim
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 80
+CMD ["node", "server.js"]

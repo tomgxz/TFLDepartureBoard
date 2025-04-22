@@ -3,14 +3,14 @@
         {
             "format": "expanded",
             "extensionName": ".css",
-            "savePath": "/site/static/css",
+            "savePath": "/static/css",
             "savePathReplacementPairs": null
         }
     ],
 
     "liveSassCompile.settings.includeItems": [
-        "/site/static/scss/build.scss",
-        "/site/static/scss/data.scss",
+        "/static/scss/build.scss",
+        "/static/scss/data.scss",
     ],
 
     "liveServer.settings.root": "/site/"

@@ -1,10 +1,10 @@
 @font-face {
   font-family: "London Underground Regular";
-  src: url("../font/London Underground Regular.ttf") format("truetype");
+  src: url("../font/LondonUndergroundRegular.ttf") format("truetype");
 }
 @font-face {
   font-family: "London Underground Bold";
-  src: url("../font/London Underground Bold.ttf") format("truetype");
+  src: url("../font/LondonUndergroundBold.ttf") format("truetype");
 }
 * {
   font-family: monospace;
