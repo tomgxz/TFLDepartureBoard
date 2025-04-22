@@ -10,6 +10,7 @@ class UndergroundLine {
     }
 }
 
+
 class UndergroundLine_Station {
     constructor(id, json_source, name, modes, stopType, placeType, lines, platforms, lat, lon, zone) {
         this.id = id;
@@ -80,24 +81,8 @@ class UndergroundLine_Station {
 }
 
 
-/**
- * Represents an arrival of an underground train on a specific line.
- * 
- * @class
- * @constructor
- * @param {string} id - The unique identifier for the arrival.
- * @param {Object} json_source - The JSON source object containing the arrival data, from the TFL API.
- * @param {UndergroundLine} line - The underground line.
- * @param {UndergroundLine_Station} station - The name of the station where the train is arriving.
- * @param {string} platform_name - The platform where the train will arrive.
- * @param {string} current_loc - Readable description of yhe current location of the train.
- * @param {string} destination - The destination of the train.
- * @param {string} towards - The terminus the train is heading towards.
- * @param {number} time_to_station - The time (in seconds) until the train arrives at the station.
- * @param {string|Date} expected - The expected arrival time of the train, as a string or Date object.
- */
 class UndergroundLine_Arrival {
-    constructor(id, json_source, line, station, platform, current_loc, destination, towards, time_to_station, expected, request_time) {
+    constructor(id, json_source, line, station, platform, current_loc, destination, towards, time_to_station, expected, vehicle, request_time) {
         this.id = id;
         this.json_source = json_source;
         this.line = line;
@@ -108,25 +93,12 @@ class UndergroundLine_Arrival {
         this.towards = towards;
         this.time_to_station = time_to_station;
         this.expected = new Date(expected);
+        this.vehicle_id = vehicle;
         this.request_time = new Date(request_time);
 
         this.loaded = true;
     }
 }
-
-/*
-class UndergroundLine_Platform {
-    constructor(id, json_source, name, number, line) {
-        this.id = id;
-        this.json_source = json_source;
-        this.name = name;
-        this.line = line;
-        this.number = number;
-
-        this.loaded = true;
-    }
-}
-*/
 
 
 const TFL_API = (function() {
@@ -136,6 +108,8 @@ const TFL_API = (function() {
     var loaded = false;
     var undergroundLines = {};
     var undergroundStations = {};
+    var ws_hub, ws_active, ws_on_push;
+
 
     async function get(url, bypass) {
         if (!loaded && !bypass) {
@@ -180,6 +154,8 @@ const TFL_API = (function() {
 
 
     async function load() {
+        // #region setup GET requests
+
         let underground_lines_json = await get(`Line/Mode/tube`, true);
 
         let stations_json = await get(`StopPoint/Type/NaptanMetroStation`, true);
@@ -250,8 +226,65 @@ const TFL_API = (function() {
             undergroundLines[line_id].loaded = true;
         }
 
+        // #endregion
+
+        // #region setup websockets
+
+        $.connection.hub.logging = false;
+        $.connection.hub.url = "https://push-api.tfl.gov.uk/signalr/hubs/signalr";
+
+        ws_hub = $.connection.predictionsRoomHub;
+
+        ws_hub.client.showPredictions = response => {
+            if (response.length === 0) {
+                console.warn("No data received from TFL API");
+                return;
+            }
+
+            let arrivals = [];
+
+            for (let arrival of response) {
+                let current_loc = arrival.CurrentLocation,
+                    destination = TFL_API.undergroundStations[arrival.DestinationNaptanId],
+                    expected = arrival.ExpectedArrival,
+                    line = TFL_API.undergroundLines[arrival.LineId],
+                    station = TFL_API.undergroundStations[arrival.NaptanId];
+                    platform = arrival.PlatformName,
+                    tts = arrival.TimeToStation,
+                    data_read = arrival.Timing.Read,
+                    towards = arrival.Towards
+                    vehicle = arrival.Vehicle;
+
+                arrivals.push(new UndergroundLine_Arrival(arrival.Id, arrival, line, station, platform, current_loc, destination, towards, tts, expected, vehicle, data_read));
+            }
+
+            arrivals.sort((a, b) => a.time_to_station - b.time_to_station);
+
+            ws_on_push(arrivals);
+        };
+
+        $.connection.hub.start()
+
+        // #endregion
+
         loaded = true;
         update_select_options();
+    }
+
+
+    async function ws(line, station) {
+        if (!loaded) {
+            console.warn("TFL API Handler not loaded");
+            return;
+        }
+
+        if (ws_active) {
+            ws_hub.server.removeLineRooms(ws_active);
+            ws_active = null;
+        }
+
+        ws_active = [{"LineId": line.id, "NaptanId": station.id}];
+        ws_hub.server.addLineRooms(ws_active);
     }
     
     load();
@@ -260,7 +293,9 @@ const TFL_API = (function() {
         loaded: loaded,
         undergroundLines: undergroundLines,
         undergroundStations: undergroundStations,
-        get: get
+        get: get,
+        ws: ws,
+        setOnWSPush: callback => ws_on_push = callback,
     }
 })();
 
@@ -270,6 +305,7 @@ const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
     var changed = true;
     var query_timeout = null;
     var last_query_time = null;
+    var cancel = false;
 
     var dom = {
         line1: {
@@ -337,44 +373,13 @@ const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
                 }
     
                 let query_fn = async () => {
-                    let arrivals = await station.getTimetable(line, platform);
-
-                    if (arrivals.length === 0) {
-                        clear();
-                        dom.line1.left.text("No trains arriving");
-                    }
-
-                    if (last_query_time && arrivals[0].request_time <= last_query_time) {
-                        console.warn("Query time is older than or same as previous query time. Skipping update.");
-                        query_timeout = setTimeout(query_fn, 5 * 1000);
+                    if (cancel) {
+                        cancel = false;
                         return;
                     }
 
-                    last_query_time = arrivals[0].request_time;
-
-                    writeArrivalLine(arrivals[0], 1, 1);
-                    writeArrivalLine(arrivals[1], 2, 2);
-                    writeArrivalLine(arrivals[2], 3, 3);
-    
-                    if (arrivals[0].time_to_station < 10) {
-                        dom.line3.left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
-                        dom.line3.right.text("")
-                    }
-    
-                    let next_query_time = Math.max(Math.min(
-                        arrivals[0]?.time_to_station % 30 || 30,
-                        arrivals[1]?.time_to_station % 30 || 30,
-                        arrivals[2]?.time_to_station % 30 || 30,
-                        30 // max of 30 seconds between requests
-                    ), 5); // min of 5 seconds between requests
-
-                    if ([NaN, undefined, null].includes(next_query_time)) {
-                        next_query_time = 30;
-                    }
-    
-                    if (next_query_time < 30) {
-                        next_query_time = 10; // refreshes faster if a train is close
-                    }
+                    let arrivals = await station.getTimetable(line, platform);
+                    let next_query_time = updateBoardTextFromArrivals(arrivals);
 
                     query_timeout = setTimeout(query_fn, next_query_time * 1000);
                 };
@@ -398,6 +403,47 @@ const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
                 return;
             }
         }
+    }
+
+    function updateBoardTextFromArrivals(arrivals) {
+        if (arrivals.length === 0) {
+            clear();
+            dom.line1.left.text("No trains arriving");
+        }
+
+        if (last_query_time && arrivals[0].request_time <= last_query_time) {
+            console.warn("Query time is older than or same as previous query time. Skipping update.");
+            query_timeout = setTimeout(query_fn, 5 * 1000);
+            return;
+        }
+
+        last_query_time = arrivals[0].request_time;
+
+        writeArrivalLine(arrivals[0], 1, 1);
+        writeArrivalLine(arrivals[1], 2, 2);
+        writeArrivalLine(arrivals[2], 3, 3);
+
+        if (arrivals[0].time_to_station < 10) {
+            dom.line3.left.text("*** STAND BACK-TRAIN APPROACHING ***").addClass("center");
+            dom.line3.right.text("")
+        }
+
+        let next_query_time = Math.max(Math.min(
+            arrivals[0]?.time_to_station % 30 || 30,
+            arrivals[1]?.time_to_station % 30 || 30,
+            arrivals[2]?.time_to_station % 30 || 30,
+            30 // max of 30 seconds between requests
+        ), 5); // min of 5 seconds between requests
+
+        if ([NaN, undefined, null].includes(next_query_time)) {
+            next_query_time = 30;
+        }
+
+        if (next_query_time < 30) {
+            next_query_time = 10; // refreshes faster if a train is close
+        }
+
+        return next_query_time;
     }
 
     function setLine(val) {
@@ -434,6 +480,8 @@ const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
         setStation: setStation,
         setPlatform: setPlatform,
         updateBoardText: updateBoardText,
+        updateBoardTextFromArrivals: updateBoardTextFromArrivals,
+        cancelGetRequestLoop: () => cancel = true,
     }
 
 })($(".board-wrapper .board-line-1"), $(".board-wrapper .board-line-2"), $(".board-wrapper .board-line-3"), $(".board-wrapper .board-line-4"));
@@ -557,6 +605,9 @@ const on_select_change_station = () => {
 
     BoardDomHandler.setStation(TFL_API.undergroundStations[station_id]);
     BoardDomHandler.updateBoardText();
+
+    TFL_API.ws(BoardDomHandler.getLine(), BoardDomHandler.getStation());
+    TFL_API.setOnWSPush(arrivals => console.log("Platform not selected, ignoring..."))
     
     reset_select_platform();
 }
@@ -571,6 +622,13 @@ const on_select_change_platform = () => {
 
         return;
     }
+
+    TFL_API.setOnWSPush(arrivals => {
+        arrivals = arrivals.filter(arrival => arrival.platform === platform);
+
+        BoardDomHandler.cancelGetRequestLoop();
+        BoardDomHandler.updateBoardTextFromArrivals(arrivals);
+    });
 
     BoardDomHandler.setPlatform(platform);
     BoardDomHandler.updateBoardText();

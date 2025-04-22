@@ -44,11 +44,11 @@
             not yet used by this site. <br> <br>
 
             The API is not fun to use. It has a load-balancer that regularly returns data that is older than the data returned in the previous 
-            request. Updates can be up to 60 seconds delayed. It provides very little and conflicting platform information, and provides very little
+            request. Updates can be up to 60 seconds delayed. It provides very little and conflicting platform information, and provides no
             documentation on using websockets. <br> <br>
 
-            This site currently pushes regular GET requests to the API to get the latest arrival data. I am currently working on moving to 
-            using websockets, but TFL provide little to no documentation on their use.
+            This site pushes regular GET requests to the API until a response is recieved from the websocket, to prevent there from being up to 30 seconds
+            of wait time between selecting a platform and seeing the results.
         </p>
         
         <ul>
@@ -71,6 +71,14 @@
                 <strong>Arrivals:</strong> Arrivals are queried per station and per line. <br>
                 The interval of queries is determined by the closest train to the station by time. <br>
                 Accessed via <a href="https://api.tfl.gov.uk/Line/Northern/Arrivals/9400ZZLULNB" target="_blank" rel="noopener noreferrer">https://api.tfl.gov.uk/Line/{Line Name}/Arrivals/{Station Naptan Code}</a>
+            </li>
+
+            <br>
+
+            <li>
+                <strong>Websockets:</strong> To get push requests from the API, the site uses a websocket connected to <a href="https://push-api.tfl.gov.uk/signalr/hubs/signalr" target="_blank" rel="noopener noreferrer">https://push-api.tfl.gov.uk/signalr/hubs/signalr</a>. <br>
+                Because of the initial delay on the websocket, once a platform is selected by the user, the site keeps sending GET requests until the first websocket response is given.
+                The documentation on this is non-existent, which made it extra fun to work out.
             </li>
         </ul>
         <p>
