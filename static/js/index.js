@@ -290,7 +290,7 @@ const TFL_API = (function() {
     load();
 
     return {
-        loaded: loaded,
+        isLoaded: () => loaded,
         undergroundLines: undergroundLines,
         undergroundStations: undergroundStations,
         get: get,
@@ -446,25 +446,34 @@ const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
         return next_query_time;
     }
 
-    function setLine(val) {
+    function setLine(val, push_to_url = true) {
         line = val;
-        set_url_param("line", line ? line.id : null);
+
+        if (push_to_url) {
+            update_url(0);
+        }
         
-        setStation(null)
+        setStation(null, push_to_url)
         changed = true;
     }
     
-    function setStation(val) {
+    function setStation(val, push_to_url = true) {
         station = val;
-        set_url_param("station", station ? station.id : null);
+
+        if (push_to_url) {
+            update_url(0);
+        }
         
-        setPlatform(null);
+        setPlatform(null, push_to_url);
         changed = true;
     }
     
-    function setPlatform(val) {
+    function setPlatform(val, push_to_url = true) {
         platform = val;
-        set_url_param("platform", platform);
+
+        if (push_to_url) {
+            update_url(0);
+        }
     
         changed = true;
     }    
@@ -637,35 +646,22 @@ const on_select_change_platform = () => {
 // #endregion
 
 
-const set_url_param = (key, value) => {
-    url_paramaters[key] = value;
+const update_url = () => {
+    let new_url = "/" +
+        (BoardDomHandler.getLine() ? BoardDomHandler.getLine().id + "/" + 
+            (BoardDomHandler.getStation() ? BoardDomHandler.getStation().id + "/" + 
+                (BoardDomHandler.getPlatform() ? BoardDomHandler.getPlatform() + "/" : "")
+            : "")
+        : "");
 
-    let as_string = "?"
 
-    for (let [key, value] of Object.entries(url_paramaters)) {
-        if (value !== null && value !== "") {
-            if (as_string !== "?") {
-                as_string += "&";
-            }
-            as_string += `${key}=${value}`;
-        }   
-    }
-
-    window.history.replaceState({}, "", as_string);
+    window.history.replaceState({}, "", new_url);
 }
-
 
 const options_wrapper = $(".options-wrapper"),
       options_line_select = options_wrapper.find("#option_line_select"),
       options_station_select = options_wrapper.find("#option_station_select"),
       options_platform_select = options_wrapper.find("#option_platform_select");
-
-
-const url_paramaters = {};
-
-for (let [key, value] of new URLSearchParams(window.location.search).entries()) {
-    url_paramaters[key] = value
-}
 
 
 $(window).on("load", async () => {
@@ -675,33 +671,33 @@ $(window).on("load", async () => {
 
     BoardDomHandler.updateBoardText();
 
-    while (!TFL_API.loaded) {
+    while (!TFL_API.isLoaded()) {
         await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    let line_id = url_paramaters.line;
-    let station_id = url_paramaters.station;
-    let platform_name = url_paramaters.platform;
+    let [line_id, station_id, platform_name] = window.location.pathname.split('/').splice(1).map(x => decodeURI(x));
 
     if (line_id && TFL_API.undergroundLines[line_id]) {
-        BoardDomHandler.setLine(TFL_API.undergroundLines[line_id]);
+        BoardDomHandler.setLine(TFL_API.undergroundLines[line_id], false);
         options_line_select.val(line_id);
         on_select_change_line();
 
         if (station_id && TFL_API.undergroundStations[station_id]) {
-            BoardDomHandler.setStation(TFL_API.undergroundStations[station_id]);
+            BoardDomHandler.setStation(TFL_API.undergroundStations[station_id], false);
             options_station_select.val(station_id);
             on_select_change_station();
 
             if (platform_name) {
                 await reset_select_platform();
-                
+
                 if (BoardDomHandler.getStation().current_query_platforms.includes(platform_name)) {
-                    BoardDomHandler.setPlatform(platform_name);
+                    BoardDomHandler.setPlatform(platform_name, false);
                     options_platform_select.val(platform_name);
                     on_select_change_platform();
                 }
             }
         }
     }
+
+    update_url();
 });
