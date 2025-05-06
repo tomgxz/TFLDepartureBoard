@@ -34,7 +34,7 @@
     <div class="page-content">
 
         <div class="board-wrapper">
-            <div class="board board--underground">
+            <div class="board board-underground">
                 <div class="board-line board-line-1">
                     <span><br></span>
                     <span><br></span>
@@ -57,17 +57,33 @@
             <div class="options">
                 <div class="option-group">
                     <label for="option_line_select">Underground line:</label>
-                    <select id="option_line_select"></select>
+                    <select id="option_line_select">
+                        <option>Loading...</option>
+                    </select>
                 </div>
 
                 <div class="option-group">
                     <label for="option_station_select">Station:</label>
-                    <select id="option_station_select"></select>
+                    <select id="option_station_select">
+                        <option>Loading...</option>
+                    </select>
                 </div>
 
                 <div class="option-group">
                     <label for="option_platform_select">Platform:</label>
-                    <select id="option_platform_select"></select>
+                    <select id="option_platform_select">
+                        <option>Loading...</option>
+                    </select>
+                </div>
+
+                <br><hr><br>
+                
+                <div class="option-group">
+                    <label for="option_style_select">Style:</label>
+                    <select id="option_style_select">
+                        <option value="original">Original</option>
+                        <option value="minimal">Minimal</option>
+                    </select>
                 </div>
             </div>
         </div>

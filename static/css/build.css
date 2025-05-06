@@ -66,14 +66,20 @@ a {
   display: flex;
   flex-direction: column;
   align-items: left;
-  justify-content: start;
+  justify-content: flex-start;
   height: -moz-fit-content;
   height: fit-content;
 }
 .page-content .board-wrapper .board .board-line {
   display: flex;
 }
-.page-content .board-wrapper .board--underground {
+.page-content .board-wrapper .board .board-line > span:first-child {
+  flex-grow: 1;
+}
+.page-content .board-wrapper .board .board-line > span:first-child.center {
+  text-align: center;
+}
+.page-content .board-wrapper .board-underground {
   background-color: #2e2e2e;
   border: 1px solid #ffc800;
   color: #ffc800;
@@ -83,48 +89,63 @@ a {
   padding: 0.2rem 0.5rem;
   row-gap: 0.2rem;
 }
-.page-content .board-wrapper .board--underground * {
+.page-content .board-wrapper .board-underground * {
   font-family: "London Underground Regular", monospace !important;
 }
-.page-content .board-wrapper .board--underground .board-line-all * {
+.page-content .board-wrapper .board-underground .board-line-all * {
   font-family: !important;
 }
-.page-content .board-wrapper .board--underground .board-line-1 {
+.page-content .board-wrapper .board-underground .board-line-1 {
   justify-content: space-between;
   align-items: center;
 }
-.page-content .board-wrapper .board--underground .board-line-1 * {
+.page-content .board-wrapper .board-underground .board-line-1 * {
   font-family: !important;
 }
-.page-content .board-wrapper .board--underground .board-line-2 {
+.page-content .board-wrapper .board-underground .board-line-2 {
   justify-content: space-between;
   align-items: center;
 }
-.page-content .board-wrapper .board--underground .board-line-2 * {
+.page-content .board-wrapper .board-underground .board-line-2 * {
   font-family: !important;
 }
-.page-content .board-wrapper .board--underground .board-line-3 {
+.page-content .board-wrapper .board-underground .board-line-3 {
   justify-content: space-between;
   align-items: center;
 }
-.page-content .board-wrapper .board--underground .board-line-3 * {
+.page-content .board-wrapper .board-underground .board-line-3 * {
   font-family: !important;
 }
-.page-content .board-wrapper .board--underground .board-line-4 {
+.page-content .board-wrapper .board-underground .board-line-4 {
   justify-content: center;
   align-items: end;
   font-family: "London Underground Bold", "London Underground Regular", monospace;
   margin-left: auto;
   margin-right: auto;
 }
-.page-content .board-wrapper .board--underground .board-line-4 * {
+.page-content .board-wrapper .board-underground .board-line-4 * {
   font-family: "London Underground Bold", "London Underground Regular", monospace !important;
 }
-.page-content .board-wrapper .board--underground .board-line > span:first-child {
-  flex-grow: 1;
+.page-content .board-wrapper .board-underground-original {
+  border: 1px solid;
+  font-family: !important;
 }
-.page-content .board-wrapper .board--underground .board-line > span:first-child.center {
-  text-align: center;
+.page-content .board-wrapper .board-underground-original * {
+  font-family: !important;
+}
+.page-content .board-wrapper .board-underground-minimal {
+  border: 1px solid;
+  width: 54ch;
+  font-family: monospace !important;
+}
+.page-content .board-wrapper .board-underground-minimal * {
+  font-family: monospace !important;
+}
+.page-content .board-wrapper .board-underground-minimal .board-line-4 {
+  font-family: monospace;
+}
+.page-content .board-wrapper .board-underground-minimal .board-line-4 * {
+  font-family: monospace !important;
 }
 .page-content .options-wrapper {
   display: flex;

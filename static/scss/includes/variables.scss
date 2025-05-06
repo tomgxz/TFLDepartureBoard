@@ -35,6 +35,7 @@ $board-maps: (
         width: 42ch,
         font: $font-underground-regular,
         font-size: calc(0.5rem + 1vw),
+
         lines: (
             all: (
                 inset: 0.2rem 0.5rem,
@@ -58,6 +59,22 @@ $board-maps: (
                 align: end,
                 font: $font-underground-bold,
             ),
+        ),
+
+        styles: (
+            original: (
+                lines: (),
+            ),
+
+            minimal: (
+                font: monospace,
+                width: 54ch,
+                lines: (
+                    4: (
+                        font: monospace,
+                    )
+                )
+            )
         )
     ),
 );

@@ -25,48 +25,35 @@
             display: flex;
             flex-direction: column;
             align-items: left;
-            justify-content: start;
+            justify-content: flex-start;
             height: fit-content;
 
             .board-line {
                 display: flex;
+
+                > span:first-child {
+                    flex-grow: 1;
+
+                    &.center {
+                        text-align: center;
+                    }
+                }
             }
 
-            @each $name, $board-map in $board-maps {
-                &--#{$name} {
-                    background-color: map-get($board-map, bg-base-color);
-                    border: 1px solid map-get($board-map, border-color);
-                    color: map-get($board-map, text-color);
-                    width: map-get($board-map, width);
-                    font-family: map-get($board-map, font) !important;
-                    * { font-family: map-get($board-map, font) !important }
-                    font-size: map-get($board-map, font-size);
+            @each $board-name, $board-map in $board-maps {
+                &-#{$board-name} {
+                    @include board-style-from-map($board-map);
 
-                    padding: map-get($board-map, lines, all, inset);
-                    row-gap: map-get($board-map, lines, all, gap);
-                    
                     .board-line {
-                        @each $line-index, $line-map in map-get($board-map, lines) {
-                            &-#{$line-index} {
-                                justify-content: map-get($line-map, justify);
-                                align-items: map-get($line-map, align);
-                                
-                                font-family: map-get($line-map, font);
-                                * { font-family: map-get($line-map, font) !important }
-                                font-size: map-get($line-map, font-size);
+                        @include board-lines-from-map(map-get($board-map, lines));
+                    }
 
-                                @if map-get($line-map, justify) == center {
-                                    margin-left: auto;
-                                    margin-right: auto;
-                                }
-                            }
-                        }
+                    @each $style-name, $style-map in map-get($board-map, styles) {
+                        &-#{$style-name} {
+                            @include board-style-from-map($style-map);
 
-                        > span:first-child {
-                            flex-grow: 1;
-
-                            &.center {
-                                text-align: center;
+                            .board-line {
+                                @include board-lines-from-map(map-get($style-map, lines));
                             }
                         }
                     }

@@ -36,6 +36,10 @@ class UndergroundLine_Station {
         let response = await TFL_API.get(`Line/${line.id}/Arrivals/${this.id}`);
         let arrivals = [];
 
+        if (!response) {
+            return null;
+        }
+
         for (let arrival of response) {
             if (arrival.platformName === platform_name) {
                 let destination = TFL_API.undergroundStations[arrival.destinationNaptan];
@@ -66,7 +70,7 @@ class UndergroundLine_Station {
     async loadPlatforms(line) {
         this.loaded = false;
 
-        let response = await TFL_API.get(`Line/${line.id}/Arrivals/${this.id}`);
+        let response = await TFL_API.get(`Line/${line.id}/Arrivals/${this.id}`, true);
         let platform_names = [];
 
         for (let arrival of response) {
@@ -106,6 +110,8 @@ const TFL_API = (function() {
     const app_key = "aef507ce475644f8a5a64d5d64652bf1";
 
     var loaded = false;
+    var minimum_wait_seconds = 0.5;
+    var latest_request_time = null;
     var undergroundLines = {};
     var undergroundStations = {};
     var ws_hub, ws_active, ws_on_push;
@@ -116,6 +122,14 @@ const TFL_API = (function() {
             console.warn("TFL API Handler not loaded");
             return;
         }
+
+
+        if (latest_request_time !== null && !bypass && latest_request_time + minimum_wait_seconds * 1000 >= Date.now()) {
+            console.warn(`API calls too close together; minimum wait of ${minimum_wait_seconds} seconds.`);
+            return;
+        }
+
+        latest_request_time = Date.now();
 
         let content_type = "application/json";
 
@@ -379,7 +393,11 @@ const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
                     }
 
                     let arrivals = await station.getTimetable(line, platform);
-                    let next_query_time = updateBoardTextFromArrivals(arrivals);
+                    let next_query_time = 5
+                    
+                    if (arrivals) {
+                        next_query_time = updateBoardTextFromArrivals(arrivals);
+                    }
 
                     query_timeout = setTimeout(query_fn, next_query_time * 1000);
                 };
@@ -411,9 +429,11 @@ const BoardDomHandler = (function(dom_line1, dom_line2, dom_line3, dom_line4) {
             dom.line1.left.text("No trains arriving");
         }
 
-        if (last_query_time && arrivals[0].request_time <= last_query_time) {
+        if (last_query_time && arrivals[0]?.request_time || Infinity <= last_query_time) {
             console.warn("Query time is older than or same as previous query time. Skipping update.");
-            query_timeout = setTimeout(query_fn, 5 * 1000);
+            if (typeof pagetype !== 'undefined') {
+                query_timeout = setTimeout(query_fn, 5 * 1000);
+            }
             return;
         }
 
@@ -643,6 +663,19 @@ const on_select_change_platform = () => {
     BoardDomHandler.updateBoardText();
 }
 
+
+const on_select_style = () => {
+    let style = options_style_select.val();
+
+    if (!valid_styles.includes(style)) {
+        return;
+    }
+
+    board_element
+        .removeClass(valid_styles.map(remove => `board-underground-${remove}`).join(" "))
+        .addClass(`board-underground-${style}`);
+}
+
 // #endregion
 
 
@@ -658,16 +691,22 @@ const update_url = () => {
     window.history.replaceState({}, "", new_url);
 }
 
-const options_wrapper = $(".options-wrapper"),
+const board_element = $(".board-wrapper > .board"),
+      options_wrapper = $(".options-wrapper"),
       options_line_select = options_wrapper.find("#option_line_select"),
       options_station_select = options_wrapper.find("#option_station_select"),
-      options_platform_select = options_wrapper.find("#option_platform_select");
+      options_platform_select = options_wrapper.find("#option_platform_select"),
+      options_style_select = options_wrapper.find("#option_style_select"),
+      valid_styles = ["original", "minimal"];
 
 
 $(window).on("load", async () => {
     options_line_select.on("change", on_select_change_line);
     options_station_select.on("change", on_select_change_station);
     options_platform_select.on("change", on_select_change_platform);
+
+    options_style_select.on("change", on_select_style);
+    on_select_style();
 
     BoardDomHandler.updateBoardText();
 
