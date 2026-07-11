@@ -1,0 +1,11 @@
+[build]
+  base = ""
+  publish = "site"
+  command = ""
+  force = true
+
+[[redirects]]
+  from = "/index.html"
+  to = "/"
+  status = 301
+  force = true
