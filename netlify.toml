@@ -1,11 +1,12 @@
 [build]
-  base = ""
-  publish = "site"
-  command = ""
-  force = true
+  command = "npm install"
+  functions = "netlify/functions"
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/index.html"
-  to = "/"
-  status = 301
-  force = true
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200
